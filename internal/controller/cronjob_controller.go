@@ -96,7 +96,7 @@ func (r *CronJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			up below).
 	*/
 	var childJobs kbatch.JobList
-	if err := r.List(ctx, &childJobs, client.InNamespace(cronJob.Namespace), client.MatchingFields{"ownerReferences": cronJob.Name}); err != nil {
+	if err := r.List(ctx, &childJobs, client.InNamespace(req.Namespace), client.MatchingFields{jobOwnerKey: req.Name}); err != nil {
 		log.Error(err, "unable to list child Jobs")
 		return ctrl.Result{}, err
 	}
@@ -416,7 +416,11 @@ func (r *CronJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &kbatch.Job{}, jobOwnerKey, func(rawObj client.Object) []string {
 		// grab the job object, extract the owner...
-		job := rawObj.(*kbatch.Job)
+		job, ok := rawObj.(*kbatch.Job)
+		if !ok {
+			logf.Log.Error(fmt.Errorf("expected a Job but got a %T", rawObj), "indexer")
+			return nil
+		}
 		owner := metav1.GetControllerOf(job)
 		if owner == nil {
 			return nil

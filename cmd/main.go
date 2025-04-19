@@ -21,6 +21,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -53,6 +54,10 @@ func init() {
 	utilruntime.Must(batchv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
+
+type realClock struct{}
+
+func (_ realClock) Now() time.Time { return time.Now() }
 
 // nolint:gocyclo
 func main() {

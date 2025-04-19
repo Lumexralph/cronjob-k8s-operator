@@ -21,7 +21,6 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
-	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -40,6 +39,7 @@ import (
 
 	batchv1 "github.com/Lumexralph/cronjob-operator/api/v1"
 	"github.com/Lumexralph/cronjob-operator/internal/controller"
+	webhookbatchv1 "github.com/Lumexralph/cronjob-operator/internal/webhook/v1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -54,10 +54,6 @@ func init() {
 	utilruntime.Must(batchv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
-
-type realClock struct{}
-
-func (_ realClock) Now() time.Time { return time.Now() }
 
 // nolint:gocyclo
 func main() {
@@ -213,6 +209,13 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CronJob")
 		os.Exit(1)
+	}
+	// nolint:goconst
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = webhookbatchv1.SetupCronJobWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "CronJob")
+			os.Exit(1)
+		}
 	}
 	// +kubebuilder:scaffold:builder
 
